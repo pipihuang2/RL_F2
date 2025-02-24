@@ -120,39 +120,44 @@ class SquareAlignmentEnv(gym.Env):
         return np.array([self.square_x, self.square_y, self.scale], dtype=np.float32)
 
     def _get_reward(self):
-        # 计算 IoU
+        # 计算模板正方形的边界
         template_left = self.template_center[0] - self.template_size // 2
         template_right = self.template_center[0] + self.template_size // 2
         template_top = self.template_center[1] - self.template_size // 2
         template_bottom = self.template_center[1] + self.template_size // 2
 
+        # 计算当前正方形的边界
         scaled_size = int(self.template_size * self.scale)
         current_left = self.square_x - scaled_size // 2
         current_right = self.square_x + scaled_size // 2
         current_top = self.square_y - scaled_size // 2
         current_bottom = self.square_y + scaled_size // 2
 
+        # 计算交集
         inter_left = max(template_left, current_left)
         inter_right = min(template_right, current_right)
         inter_top = max(template_top, current_top)
         inter_bottom = min(template_bottom, current_bottom)
 
+        # 交集面积（如果没有交集，面积为0）
         inter_area = max(0, inter_right - inter_left) * max(0, inter_bottom - inter_top)
 
+        # 计算并集面积
         template_area = self.template_size * self.template_size
         current_area = scaled_size * scaled_size
         union_area = template_area + current_area - inter_area
 
+        # 计算 IoU
         iou = inter_area / union_area if union_area > 0 else 0
 
-        # 优化奖励：IoU = 0 时给小负奖励，低 IoU 线性增加
-        if iou == 0:
-            reward = -0.1  # 小负奖励，鼓励探索
-        elif iou < 0.5:
-            reward = 0.5 * iou  # 低 IoU 线性奖励
-        else:
-            reward = iou  # 高 IoU 使用原始奖励
-        if iou > 0.9:  # IoU > 0.9 额外奖励
+        # 计算中心距离
+        current_center = np.array([self.square_x, self.square_y])
+        distance = np.sqrt(np.sum((current_center - self.template_center) ** 2))
+        distance_reward = -distance / self.max_distance  # 规范化到 [-1, 0]
+
+        # 综合奖励
+        reward = iou + distance_reward - 0.1  # 基线奖励
+        if iou > 0.9 and distance < 10:  # 高 IoU 且距离近时加额外奖励
             reward += 0.5
 
         return float(reward)
@@ -200,7 +205,7 @@ class SquareAlignmentEnv(gym.Env):
 
         iou = inter_area / union_area if union_area > 0 else 0
 
-        # 结束条件：IoU > 0.95（几乎完全重合）
+        # 结束条件：IoU > 0.9（保持高精度）
         return iou > 0.9
 
     def render(self, mode='human'):
