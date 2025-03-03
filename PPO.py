@@ -162,23 +162,6 @@ class SquareAlignmentEnv(gym.Env):
 
         return float(reward)
 
-    # def _get_reward(self):
-    #     distance = np.sqrt((self.square_x - self.template_center[0]) ** 2 +
-    #                        (self.square_y - self.template_center[1]) ** 2)
-    #     scale_diff = abs(self.scale - 1.0)
-    #     distance_reward = -distance / self.max_distance
-    #     scale_reward = -scale_diff / 1.5
-    #     reward = distance_reward + scale_reward
-    #     if distance < 10 and scale_diff < 0.05:  # 缩小阈值
-    #         reward += 1.0
-    #     return float(reward)
-
-    # def _is_done(self):
-    #     distance = np.sqrt((self.square_x - self.template_center[0]) ** 2 +
-    #                        (self.square_y - self.template_center[1]) ** 2)
-    #     scale_diff = abs(self.scale - 1.0)
-    #     return distance < 10 and scale_diff < 0.05  # 缩小阈值
-
     def _is_done(self):
         # 计算 IoU
         template_left = self.template_center[0] - self.template_size // 2
